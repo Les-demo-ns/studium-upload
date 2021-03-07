@@ -7,6 +7,7 @@ parser = argparse.ArgumentParser(description="AH")
 parser.add_argument('inputfile', type=str)
 parser.add_argument("templatefile", type=str)
 parser.add_argument('colname', type=str, metavar='N', nargs='+')
+parser.add_argument("--notfound", type=str, default="notfound.csv")
 parser = parser.parse_args()
 
 def do_csv(name, line_func, first_line_func):
@@ -56,3 +57,6 @@ do_csv(parser.templatefile, modnote, getfirstline)
 run(f"rm -rf {parser.templatefile}")
 run(f"cp {tempfile} {parser.templatefile}")
 run(f"rm -rf {tempfile}")
+
+for l in not_founds:
+    output(parser.notfound, [parser.inputfile, l])
