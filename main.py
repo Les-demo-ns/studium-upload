@@ -24,6 +24,7 @@ def get_col_nb(colname_list: list, colname):
     return colname_list.index(colname)
 
 def output(filename, content: list):
+    content = [str(x) for x in content]
     content = ['"'+c+'"' if " " in c else c for c in content]
     with open(filename, "a") as f:
         f.write(",".join(content) + "\n")
@@ -48,7 +49,7 @@ def modnote(line):
     for iname, name in enumerate(parser.colname):
         try:
             note = note_dict[mat][iname]
-            line[get_col_nb(fline, name)] = note
+            line[get_col_nb(fline, name)] = float(note)*100
         except KeyError:
             not_founds.append(mat)
     output(tempfile, line)
