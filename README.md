@@ -2,8 +2,9 @@
 Uploads to Studium
 
 1. Go on studium, go in gradebook, select "Notes > Exporter > Fichier texte", download. In this example we saved it as "studium.csv".
-2. Make a csv for the grades you want to upload. Must be of shape [matricule, grade1, grade2, ...]. **No csv header.** In this example, we saved it as "grades.csv".
-3. Run this script:  
+2. Make a csv for the grades you want to upload. Must be of shape [matricule, grade1, grade2, ...]. **No csv header.** 
+    We assume grades are from 0.0 to 1.0. In this example, we saved it as "grades.csv".
+4. Run this script:  
 
         python3 main.py studium.csv grades.csv "TP0 (Brut)" TP1 Exam1\
     or
