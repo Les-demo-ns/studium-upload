@@ -1,7 +1,7 @@
-# Merges a "notes.csv" CSV in MAT,NOTE format with a studium import csv "studium.csv"
+# Merges the second column of `inputfile` into the `colname` column of the `templatefile`
 
 import argparse
-import subprocess
+import csv
 
 parser = argparse.ArgumentParser(description="AH")
 parser.add_argument('inputfile', type=str)
@@ -10,54 +10,88 @@ parser.add_argument('colname', type=str, metavar='N', nargs='+')
 parser.add_argument("--notfound", type=str, default="notfound.csv")
 parser = parser.parse_args()
 
-def do_csv(name, line_func, first_line_func):
-    import csv
-    with open(name) as csvfile:
-        reader = csv.reader(csvfile, delimiter=",", quotechar='"')
-        for i, row in enumerate(reader):
-            if i == 0:
-                first_line_func(row)
-            else:
-                line_func(row)
 
-def get_col_nb(colname_list: list, colname):
-    return colname_list.index(colname)
+class VirtualCSV:
+    def __init__(self, file):
+        self.first_line = None  # used to store first-line-specific information
+        self.lines = []  # used to store line-specific information
+        self.dico = {}  # used to store csv-global information, if need be
 
-def output(filename, content: list):
-    content = [str(x) for x in content]
-    content = ['"'+c+'"' if " " in c else c for c in content]
-    with open(filename, "a") as f:
-        f.write(",".join(content) + "\n")
+        with open(file) as csvfile:
+            reader = csv.reader(csvfile, delimiter=",", quotechar='"')
+            for i, row in enumerate(reader):
+                if i == 0:
+                    self.first_line_func(row)
+                else:
+                    self.line_func(row)
 
-def run(command):
-    subprocess.run(command, shell=True, capture_output=True, check=True, universal_newlines=True)
+    def output(self, filename):
+        string = ""
+        if self.first_line is not None:
+            string += self._output(self.first_line)
 
-note_dict = {}
-def addto(line): note_dict[line[0]] = line[1:]
-do_csv(parser.inputfile, addto, addto)
+        for line in self.lines:
+            string += self._output(line)
 
-firstline = []
-def getfirstline(x):
-    firstline.append(x)
-    output(tempfile, x)
-import time
-tempfile = time.strftime("%s%D%Y%h").replace("/", "")
-not_founds = []
-def modnote(line):
-    fline = firstline[0]
-    mat = line[get_col_nb(fline, "Matricule")]
-    for iname, name in enumerate(parser.colname):
-        try:
-            note = note_dict[mat][iname]
-            line[get_col_nb(fline, name)] = float(note)*100
-        except KeyError:
-            not_founds.append(mat)
-    output(tempfile, line)
-do_csv(parser.templatefile, modnote, getfirstline)
+        with open(filename, "w") as f:
+            f.write(string)
 
-run(f"rm -rf {parser.templatefile}")
-run(f"cp {tempfile} {parser.templatefile}")
-run(f"rm -rf {tempfile}")
+    def _output(self, content):
+        content = [str(x) for x in content]
+        content = ['"' + c + '"' if " " in c else c for c in content]
+        return ",".join(content) + "\n"
 
-for l in not_founds:
-    output(parser.notfound, [parser.inputfile, l])
+    def first_line_func(self, row):
+        raise NotImplementedError()
+
+    def line_func(self, row):
+        raise NotImplementedError()
+
+
+class InputCSV(VirtualCSV):
+    def __init__(self, file):
+        super().__init__(file)
+
+    def first_line_func(self, row):
+        return self.line_func(row)  # first line not special
+
+    def line_func(self, row):
+        self.dico[row[0]] = row[1:]  # in dico, we want dico{matricule} = [grades]
+
+
+class OutputCSV(VirtualCSV):
+    def __init__(self, file, note_dico, colnames):
+        self.colnames = colnames  # names of columns to match
+        self.note_dico = note_dico  # note dict taken from input csv
+        self.not_founds = []  # mats that couldnt be matched
+        super().__init__(file)
+
+    def first_line_func(self, row):
+        def get_col_nb(colname):
+            return row.index(colname)
+
+        self.first_line = row
+        self.mat_col_nb = get_col_nb("Matricule")  # remember column id of matricule
+        self.colindices = []
+        for name in self.colnames:
+            self.colindices.append(get_col_nb(name))  # remember column id of columns to match in an ordered fashion
+
+    def line_func(self, row):
+        mat = row[self.mat_col_nb]  # get matricule string
+        for colname_index, _ in enumerate(self.colnames):
+            try:
+                note = self.note_dico[mat][colname_index]  # get grade for column to match
+
+                row[self.colindices[colname_index]] = float(note) * 100  # assign value to specific column in row
+            except KeyError:
+                self.not_founds.append(mat)  # remember matricules that couldn't be matched
+        self.lines.append(row)
+if __name__ == "__main__":
+    input = InputCSV(parser.inputfile)
+
+    output = OutputCSV(parser.templatefile, input.dico, parser.colname)
+    output.output("results.csv")
+
+    with open(parser.notfound, 'w') as f:
+        for l in output.not_founds:
+            f.write(l + "\n")
