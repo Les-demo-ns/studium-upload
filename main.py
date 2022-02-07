@@ -86,6 +86,8 @@ class OutputCSV(VirtualCSV):
             except KeyError:
                 self.not_founds.append(mat)  # remember matricules that couldn't be matched
         self.lines.append(row)
+
+
 if __name__ == "__main__":
     input = InputCSV(parser.inputfile)
 
