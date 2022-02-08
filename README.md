@@ -6,7 +6,7 @@ Uploads to Studium
     We assume grades are from 0.0 to 1.0. In this example, we saved it as "grades.csv".
 4. Run this script:  
 
-        python3 main.py studium.csv grades.csv "TP0 (Brut)" TP1 Exam1\
+        python3 main.py studium.csv grades.csv "TP0 (Brut)" TP1 Exam1
     or
 
         python3 main.py studium.csv grades.csv "TP0 (Brut)"
